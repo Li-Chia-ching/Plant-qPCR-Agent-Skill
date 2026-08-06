@@ -1,5 +1,7 @@
 # Plant qPCR Agent Skill
 
+[![DOI](https://zenodo.org/badge/1324714426.svg)](https://doi.org/10.5281/zenodo.21817268)
+
 ## Automated qPCR Primer Design and Expression Analysis Workflow
 
 ## Overview
