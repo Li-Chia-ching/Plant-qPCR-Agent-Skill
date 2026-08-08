@@ -1,508 +1,1094 @@
-# Plant qPCR Primer Design and Expression Analysis Skill
-
-## 1. Skill Overview
-
-This Skill provides an automated bioinformatics workflow for plant qPCR experiment preparation, covering:
-
-1. Target gene validation from genome annotation
-2. qPCR primer design based on genomic and transcript sequences
-3. Primer specificity evaluation
-4. Polyploid/homologous gene compatibility assessment
-5. Standardized primer report generation
-6. Optional downstream qPCR Ct-value analysis and visualization
-
-The workflow is designed for plant species with:
-
-* chromosome-level genome assemblies
-* GFF3 genome annotations
-* CDS/transcript/protein sequence databases
-* gene family analysis results
-
-The Skill does not perform gene family identification. It assumes that target genes have already been identified by upstream analyses.
 
 ---
 
-# 2. Input Requirements
+name: plant-genome-guided-primer-design
+version: 2.0.0
+description: >
+  A genome-guided workflow for plant gene identity validation,
+  homolog analysis, and experimental primer design.
+  The workflow prevents incorrect primer design caused by
+  gene ID misannotation, duplicated genes, paralogs, and polyploid genomes.
 
-Before execution, the user should provide:
+author: Li-Chia-ching
+language: en
 
-## 2.1 Genome resources
+domain:
+  - plant molecular biology
+  - bioinformatics
+  - genome annotation
+  - primer design
+  - gene expression analysis
+
+supported_tasks:
+  - gene_identity_validation
+  - gene_sequence_confirmation
+  - gene_family_context_analysis
+  - full_length_cds_cloning_primer_design
+  - infusion_cloning_primer_design
+  - sqRT-PCR_primer_design
+  - qRT-PCR_primer_design
+  - homolog_specific_primer_design
+  - polyploid_specificity_evaluation
+  - PCR_simulation
+  - scientific_report_generation
+
+supported_species:
+  - diploid_plants
+  - autotetraploid_plants
+  - allopolyploid_plants
+
+input_requirements:
+  required_files:
+    - genome_fasta
+    - annotation_gff3
+    - cds_fasta
+    - transcript_fasta
+
+  optional_files:
+    - protein_fasta
+    - haplotype_sequences
+    - gene_family_sequences
+    - reference_species_sequences
+
+input_types:
+  - gene_id
+  - gene_list
+  - gene_family_name
+  - nucleotide_sequence
+  - protein_sequence
+
+mandatory_workflow:
+  - target_identity_validation
+  - transcript_selection
+  - homolog_analysis
+  - experimental_objective_confirmation
+  - primer_design
+  - specificity_validation
+  - pcr_simulation
+  - report_generation
+
+design_modes:
+  cloning:
+    enabled: true
+    purpose: full_length_orf_amplification
+
+  sqRT-PCR:
+    enabled: true
+    purpose: semi_quantitative_expression_detection
+
+  qRT-PCR:
+    enabled: true
+    purpose: quantitative_expression_analysis
+
+  homolog_specific:
+    enabled: true
+    purpose: distinguish_related_genes
+
+critical_rules:
+  - never_design_primers_directly_from_gene_id
+  - always_validate_gene_identity_before_primer_design
+  - always_check_gene_family_specificity_for_duplicate_genes
+  - always_consider_polyploid_homologs_when_available
+  - never_apply_qPCR_parameters_to_sqRT-PCR
+  - stop_workflow_if_target_identity_fails
+
+recommended_tools:
+  sequence_analysis:
+    - Biopython
+    - BLAST+
+    - HMMER
+    - MAFFT
+
+  primer_design:
+    - Primer3
+    - primer3-py
+
+  report_generation:
+    - Python
+    - matplotlib
+    - reportlab
+
+outputs:
+  - Gene_identity_validation.tsv
+  - Gene_relationship_analysis.tsv
+  - Validated_target_sequence.fasta
+  - Cloning_primers.tsv
+  - sqRT_PCR_primers.tsv
+  - qRT_PCR_primers.tsv
+  - Primer_specificity.tsv
+  - PCR_simulation.tsv
+  - Primer_Design_Report.pdf
+
+failure_conditions:
+  - incorrect_gene_annotation
+  - missing_sequence_information
+  - failed_identity_validation
+  - unresolved_target_conflict
+
+interaction_policy:
+  ask_before_execution:
+    - experimental_objective
+    - target_gene_source
+    - confidence_of_gene_identity
+
+priority:
+  biological_validation: highest
+  primer_design: secondary
+  automation: after_validation
+
+---
+
+# Plant Genome-Guided Gene Validation and Primer Design Skill
+
+## 1. Skill Overview
+
+This Skill provides a genome-guided workflow for reliable plant gene validation and molecular biology primer design.
+
+The primary purpose is to prevent incorrect primer design caused by:
+
+- incorrect gene identifiers
+- outdated genome annotations
+- duplicated genes
+- paralog confusion
+- polyploid genome complexity
+- incorrect transcript selection
+
+The workflow follows a mandatory validation-first strategy:
+
+```
+
+Candidate gene information
+↓
+Gene identity validation
+↓
+Sequence confirmation
+↓
+Gene family / homolog analysis
+↓
+Experimental objective definition
+↓
+Primer design
+↓
+Specificity validation
+↓
+PCR simulation
+↓
+Experimental report
+
+```
+
+The Skill supports:
+
+- full-length CDS cloning primer design
+- In-Fusion/Gibson assembly primer design
+- semi-quantitative RT-PCR (sqRT-PCR) primer design
+- qRT-PCR primer design
+- homolog/paralog-specific primer design
+- polyploid genome primer evaluation
+
+
+---
+
+# 2. Supported Species and Data Requirements
+
+The workflow is optimized for plant genomes with:
 
 Required:
 
 ```
+
 Genome/
+
 ├── genome.fa
 ├── annotation.gff3
 ├── cds.fa
 └── transcript.fa
-```
-
-Optional:
 
 ```
+
+Recommended:
+
+```
+
 ├── protein.fa
 ├── haplotype_sequences/
-└── reference_species_proteins/
+├── gene_family_sequences/
+└── reference_species_sequences/
+
 ```
+
+Compatible with:
+
+- diploid plants
+- autotetraploid plants
+- allopolyploid plants
+- chromosome-level assemblies
+- annotated draft genomes
+
 
 ---
 
-## 2.2 Target gene information
+# 3. User Input and Interactive Confirmation
 
-Required:
+Before starting analysis, the Agent should collect necessary information.
 
-One of:
+## 3.1 Required user information
 
-* target gene ID list
+Ask the user:
+
+### Question 1
+
+What is the experimental purpose?
+
+Options:
+
+```
+
+A. Full-length gene cloning
+B. Expression analysis
+C. qRT-PCR quantification
+D. Functional validation
+E. Other
+
+```
+
+
+### Question 2
+
+How was the target selected?
+
+Options:
+
+```
+
+A. Gene ID from genome annotation
+B. Gene family analysis
+C. Transcriptome result
+D. Published gene
+E. User-provided sequence
+
+```
+
+
+### Question 3
+
+Is the target gene identity already experimentally confirmed?
+
+Options:
+
+```
+
+A. Yes
+B. No
+C. Unknown
+
+```
+
+
+If the target identity is uncertain:
+
+The workflow MUST perform additional validation.
+
+
+---
+
+# 4. Input Files and Target Definition
+
+The user may provide:
+
+## Option A
+
+Gene ID list
 
 Example:
 
 ```
-Msa085132
-Msa076748
-Msa069302
-```
 
-or:
+Gene001
+Gene002
 
 ```
-target_gene_list.csv
+
+
+## Option B
+
+Gene family name
+
+Example:
+
 ```
 
-containing:
+ABC transporter
+WRKY transcription factor
 
-| Gene_ID | Transcript_ID |
-| ------- | ------------- |
-| Gene001 | Transcript001 |
+```
+
+## Option C
+
+Sequence file
+
+Example:
+
+```
+
+target.fasta
+
+```
+
+
+Important:
+
+A gene ID is treated as a candidate identifier only.
+
+The Agent MUST NOT assume that the gene ID is biologically correct.
+
 
 ---
 
-## 2.3 Previous primer information (optional)
+# 5. Mandatory Gene Identity Validation Module
 
-If previous cloning/qPCR primers exist:
+## 5.1 Purpose
+
+Confirm:
 
 ```
-Previous_Primers/
-└── primer_archive.txt
+
+Is this genomic locus actually the biological target?
+
 ```
 
-The Skill should extract:
+before primer design.
 
-* old primer sequences
-* target genes
-* previous PCR product size
-* experimental problems
-
-Previous failed primers should not be reused automatically.
 
 ---
 
-# 3. Experimental Objective Definition
+## 5.2 Annotation validation
 
-Before primer design, determine the experimental goal:
+Extract:
+
+- Gene ID
+- Transcript ID
+- chromosome/scaffold
+- strand
+- exon number
+- CDS length
+- protein length
+- annotation description
+
+
+Generate:
 
 ```
-A. Single gene expression quantification
 
-B. Homeolog/paralog-specific expression
+Gene_identity_validation.tsv
 
-C. Gene family or subgroup expression
-
-D. Expression validation of transcriptomic results
 ```
 
-The primer design strategy must match the objective.
+
+Columns:
+
+```
+
+Gene_ID
+Transcript_ID
+Location
+Strand
+CDS_length
+Protein_length
+Annotation
+Validation_status
+
+```
+
 
 ---
 
-# 4. Target Gene Validation Module
+# 6. Sequence-Based Identity Validation
 
-## Required operations
+The Agent should evaluate target identity using available evidence.
 
-The Agent should:
 
-1. Read target gene list.
-2. Verify gene IDs against genome annotation.
-3. Extract:
+## 6.1 Protein/domain validation
 
-* chromosome/scaffold location
-* strand information
-* exon coordinates
-* intron coordinates
-* CDS sequence
-* transcript sequence
-* protein sequence
+If protein sequences exist:
 
-4. Generate:
+Analyze:
 
-```
-Target_gene_structure.csv
-```
+- conserved domains
+- functional motifs
+- protein architecture
+- similarity to known proteins
 
-containing:
 
-| Gene_ID | Transcript | Exon_number | Intron_number | Length |
-| ------- | ---------- | ----------- | ------------- | ------ |
+Methods:
+
+Recommended:
+
+- HMMER
+- BLASTP
+- local alignment
+- motif scanning
+
+
+The workflow should adapt to the target gene.
+
+Examples:
+
+- enzyme:
+  catalytic domains
+
+- transcription factor:
+  DNA-binding domains
+
+- transporter:
+  membrane domains
+
+- structural proteins:
+  conserved regions
+
 
 ---
 
-# 5. qPCR Primer Design Module
+## 6.2 Homology validation
 
-## 5.1 Amplicon length requirements
+Compare against:
 
-Primary requirement:
+- curated reference proteins
+- published homologs
+- related species databases
+
+
+Report:
 
 ```
-80–200 bp
+
+Identity evidence:
+Strong
+Moderate
+Weak
+Failed
+
+```
+
+
+---
+
+# 7. Validation Decision Gate
+
+Primer design cannot start until validation is completed.
+
+
+## Accepted
+
+```
+
+VALIDATED
+
+```
+
+Evidence:
+
+- correct annotation
+- sequence agreement
+- expected functional characteristics
+
+
+## Warning
+
+```
+
+UNCERTAIN
+
+```
+
+Possible causes:
+
+- incomplete annotation
+- multiple isoforms
+- weak functional evidence
+
+
+The Agent should ask user whether to continue.
+
+
+## Failed
+
+```
+
+FAILED
+
+```
+
+Possible causes:
+
+- incorrect gene ID
+- missing sequence
+- inconsistent annotation
+
+
+The Agent must stop primer design.
+
+
+---
+
+# 8. Transcript Selection Module
+
+For genes with multiple transcripts:
+
+Evaluate:
+
+- longest complete CDS
+- canonical transcript
+- experimentally supported isoform
+
+
+Report:
+
+```
+
+Selected transcript:
+
+Reason:
+
+```
+
+
+Do not automatically choose the first transcript in annotation.
+
+
+---
+
+# 9. Gene Family and Homolog Analysis
+
+Mandatory for:
+
+- gene families
+- duplicated genes
+- polyploid species
+- paralog-rich genomes
+
+
+Identify:
+
+```
+
+Target gene
+
+├── Allelic variants
+├── Homeologs
+├── Paralogs
+└── Related family members
+
+```
+
+
+Generate:
+
+```
+
+Gene_relationship_analysis.tsv
+
+```
+
+
+Columns:
+
+```
+
+Gene_ID
+Similarity
+Relationship
+Protein_identity
+Risk_level
+
+```
+
+
+---
+
+# 10. Experimental Objective Selection
+
+Primer design strategy depends on the purpose.
+
+
+## A. Full-length cloning
+
+Goal:
+
+Obtain complete ORF.
+
+
+## B. sqRT-PCR
+
+Goal:
+
+Detect transcript expression by agarose gel.
+
+
+## C. qRT-PCR
+
+Goal:
+
+Quantitative expression measurement.
+
+
+## D. Specific homolog detection
+
+Goal:
+
+Distinguish highly similar genes.
+
+
+The Agent MUST select different primer rules.
+
+
+---
+
+# 11. Full-Length CDS Cloning Primer Design
+
+Requirements:
+
+Template:
+
+validated CDS
+
+
+Primer structure:
+
+Forward:
+
+```
+
+Vector overlap
++
+5' CDS-specific sequence
+
+```
+
+
+Reverse:
+
+```
+
+Vector overlap
++
+3' CDS-specific sequence
+
+```
+
+
+Gene-specific region:
+
+```
+
+20-30 bp
+
+```
+
+
+Parameters:
+
+```
+
+Length:
+18-30 nt
+
+Tm:
+58-65°C
+
+GC:
+40-60%
+
+```
+
+
+Mandatory checks:
+
+- complete ORF coverage
+- correct orientation
+- no internal stop codon
+- expected PCR product size
+
+
+Output:
+
+```
+
+Cloning_primers.tsv
+
+```
+
+
+---
+
+# 12. sqRT-PCR Primer Design
+
+Purpose:
+
+Semi-quantitative RT-PCR.
+
+
+Amplicon:
+
+```
+
+200-500 bp
+
 ```
 
 Preferred:
 
 ```
-100–150 bp
-```
 
-Maximum acceptable:
+250-350 bp
 
 ```
-≤250 bp
-```
 
-Candidates exceeding 250 bp must be discarded.
 
----
-
-## 5.2 Intron/exon strategy
-
-The workflow should prioritize:
-
-### Level A
-
-Primer pair spanning exon junctions.
-
-### Level B
-
-Primer pair crossing intron regions.
-
-Requirements:
-
-* distinguish cDNA from genomic DNA
-* preferably create ≥100 bp difference between cDNA and gDNA products
-
-### Level C
-
-Single exon genes.
-
-If no intron exists:
-
-The workflow must NOT terminate.
-
-The report must include:
+Primer parameters:
 
 ```
-Single exon gene.
-Genomic DNA contamination cannot be excluded by primer design.
-DNase I treatment before reverse transcription is required.
-```
 
----
+Length:
+18-25 nt
 
-# 6. Primer Biochemical Parameters
+Tm:
+58-62°C
 
-Candidate primers must satisfy:
-
-| Parameter           | Requirement                    |
-| ------------------- | ------------------------------ |
-| Length              | 18–25 nt                       |
-| Tm                  | 58–62°C                        |
-| Optimal Tm          | ~60°C                          |
-| Pair Tm difference  | ≤2°C                           |
-| GC content          | 40–60%                         |
-| Preferred GC        | 45–55%                         |
-| Secondary structure | No strong hairpin              |
-| 3' end              | No strong self-complementarity |
-
-Primer design engine:
-
-Recommended:
+GC:
+40-60%
 
 ```
-primer3-py
-```
 
----
 
-# 7. Specificity Validation Module
+Prefer:
 
-## 7.1 Sequence databases
+- unique transcript regions
+- exon boundaries
+- non-conserved regions
 
-Validate against:
 
-Required:
+Avoid:
 
-```
-transcript.fa
-cds.fa
-```
+- conserved family domains
+- repetitive sequences
 
-Recommended:
-
-```
-genome.fa
-```
-
----
-
-## 7.2 Specificity classification
-
-Do not simply classify as unique/non-unique.
-
-Use:
-
-### Class I
-
-Gene-specific primer.
-
-Only target locus detected.
-
-### Class II
-
-Target gene family member-specific.
-
-Possible homeolog amplification.
-
-### Class III
-
-Subfamily/family expression primer.
-
-Suitable only for group expression analysis.
 
 Output:
 
 ```
-Specificity_Class
+
+sqRT_PCR_primers.tsv
+
 ```
+
 
 ---
 
-# 8. Polyploid and Haplotype Compatibility
+# 13. qRT-PCR Primer Design
 
-For polyploid species:
+Amplicon:
 
-If haplotype sequences are available:
+```
 
-1. Compare primer binding regions.
-2. Detect SNP/InDel variation.
-3. Prefer conserved regions.
+80-200 bp
+
+```
+
+
+Preferred:
+
+```
+
+100-150 bp
+
+```
+
+
+Additional requirements:
+
+- primer efficiency consideration
+- minimal secondary structures
+- consistent Tm
+
+
+Output:
+
+```
+
+qRT_PCR_primers.tsv
+
+```
+
+
+---
+
+# 14. Primer Specificity Validation
+
+Mandatory for all primer types.
+
+
+Databases:
+
+Required:
+
+```
+
+cds.fa
+transcript.fa
+
+```
+
+
+Recommended:
+
+```
+
+genome.fa
+
+```
+
+
+Check:
+
+- exact matches
+- mismatches
+- off-target genes
+- family members
+
+
+Classification:
+
+## Class I
+
+Target-specific
+
+
+## Class II
+
+Possible homolog amplification
+
+
+## Class III
+
+Non-specific
+
+
+Output:
+
+```
+
+Primer_specificity.tsv
+
+```
+
+
+---
+
+# 15. Polyploid Genome Evaluation
+
+For polyploid plants:
+
+Evaluate:
+
+- allele variation
+- homeolog similarity
+- SNP/InDel in primer binding sites
+
 
 Report:
 
 ```
-Haplotype compatibility:
-- Universal
-- Hap1 specific
-- Hap2 specific
-- Variable region
+
+Universal
+Allele-biased
+Homeolog-specific
+High-risk
+
 ```
+
 
 ---
 
-# 9. Computational Stability Requirements
+# 16. PCR Simulation
 
-## 9.1 External tool fallback
+Perform in silico PCR.
 
-If BLAST or external tools fail:
 
-The Agent should automatically switch to:
+Check:
 
-* Biopython sequence matching
-* local alignment
-* k-mer based screening
+- primer binding position
+- orientation
+- expected fragment size
+- multiple amplification products
 
-Do not terminate workflow because of missing external software.
+
+Output:
+
+```
+
+PCR_simulation.tsv
+
+```
+
 
 ---
 
-## 9.2 Memory management
+# 17. Primer Ranking
 
-For large genomes:
+Each gene should provide:
 
-Use:
+2-3 candidate primer pairs.
 
-* batch processing
-* generators
-* indexed FASTA access
 
-Avoid loading complete genome sequences into memory.
+Suggested scoring:
 
----
 
-# 10. Primer Ranking
+|Category|Weight|
+|-|-|
+|Specificity|35%|
+|Sequence validation confidence|25%|
+|Primer quality|20%|
+|Experimental suitability|20%|
 
-Each gene should output:
-
-2–3 candidate primer pairs.
-
-Recommended scoring:
-
-```
-Specificity                 30%
-Amplicon suitability        25%
-Primer thermodynamics       20%
-Exon/intron design          15%
-Haplotype conservation      10%
-```
 
 ---
 
-# 11. Output Files
+# 18. Output Files
 
-## 11.1 Primer result table
+Generate:
 
-Filename:
-
-```
-Target_qPCR_Primers_Result.csv
-```
-
-Required columns:
 
 ```
-Gene_ID
-Transcript_ID
-Primer_pair_ID
-Forward_primer
-Reverse_primer
-Amplicon_length
-Forward_Tm
-Reverse_Tm
-Forward_GC
-Reverse_GC
-Intron_crossing
-Intron_length
-Specificity_Class
-Haplotype_compatibility
-Score
-Notes
+
+Gene_identity_validation.tsv
+
+Gene_relationship_analysis.tsv
+
+Validated_target_sequence.fasta
+
+Cloning_primers.tsv
+
+sqRT_PCR_primers.tsv
+
+qRT_PCR_primers.tsv
+
+Primer_specificity.tsv
+
+PCR_simulation.tsv
+
+Primer_Design_Report.pdf
+
 ```
+
 
 ---
 
-## 11.2 Design report
+# 19. Final Report Requirements
 
-Filename:
+Generate an A4 scientific report.
 
-```
-Target_qPCR_Primers_Report.md
-```
 
 Include:
 
-* project summary
-* target gene list
-* design parameters
-* recommended primers
-* specificity interpretation
-* experimental precautions
-* limitations
+
+## 1. Project information
+
+- species
+- genome version
+- objective
+
+
+## 2. Target validation
+
+- annotation evidence
+- sequence evidence
+- confidence level
+
+
+## 3. Gene relationship analysis
+
+- homologs
+- paralogs
+- polyploid risks
+
+
+## 4. Primer design
+
+- sequences
+- parameters
+- expected products
+
+
+## 5. Specificity evaluation
+
+
+## 6. PCR simulation
+
+
+## 7. Experimental recommendations
+
 
 ---
 
-# 12. Optional Module: qPCR Ct Data Analysis
+# 20. Fail-Safe Rules
 
-## Trigger conditions
+The Agent MUST NOT:
 
-Activate when user provides:
 
-* Ct values
-* qPCR results
-* relative expression request
-* expression visualization request
-
----
-
-# 12.1 Input format
-
-Required columns:
+❌ Use gene ID directly for primer design
 
 ```
-Sample
-Treatment
-Target_Gene
-Reference_Gene
-Ct_Target
-Ct_Reference
-Biological_rep
-Technical_rep
-```
 
----
-
-# 12.2 Data cleaning
-
-The script must safely process:
-
-* Undetermined
-* empty values
-* non-numeric labels
-
-Never directly convert raw Ct columns using:
-
-```r
-as.numeric()
-```
-
-without preprocessing.
-
----
-
-# 12.3 Relative expression calculation
-
-Implement:
-
-## ΔCt
-
-[
-\Delta Ct=Ct_{target}-Ct_{reference}
-]
-
-## ΔΔCt
-
-[
-\Delta\Delta Ct=\Delta Ct_{sample}-\Delta Ct_{control}
-]
-
-## Relative expression
-
-[
-RQ=2^{-\Delta\Delta Ct}
-]
-
----
-
-# 12.4 R visualization
-
-Generate R scripts using:
-
-* dplyr
-* ggplot2
-
-Outputs:
-
-* summary statistics
-* mean ± SE
-* publication-quality figures
-
-Recommended output:
+Gene_ID
+↓
+Primer
 
 ```
-Expression_summary.csv
 
-Expression_plot.pdf
-Expression_plot.tiff
+
+❌ Assume annotation is correct
+
+
+❌ Ignore homologs in polyploid genomes
+
+
+❌ Use qPCR parameters for sqRT-PCR
+
+
+Correct workflow:
+
+
 ```
 
----
+Gene candidate
 
-# End of Skill
+↓
+
+Identity validation
+
+↓
+
+Sequence confirmation
+
+↓
+
+Experimental objective
+
+↓
+
+Primer design
+
+↓
+
+Specificity validation
+
+↓
+
+PCR simulation
+
+↓
+
+Report
+
+```
