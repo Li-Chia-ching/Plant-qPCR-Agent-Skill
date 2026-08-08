@@ -1,235 +1,621 @@
-# Plant qPCR Agent Skill
+# Plant Genome-Guided Primer Design Agent Skill
 
-[![DOI](https://zenodo.org/badge/1324714426.svg)](https://doi.org/10.5281/zenodo.21817268)
 
-## Automated qPCR Primer Design and Expression Analysis Workflow
+## Automated Gene Validation, Primer Design, and Expression Analysis Workflow
 
-## Overview
 
-Plant qPCR experiments often fail because of inappropriate primer design, insufficient specificity validation, or inconsistent downstream Ct-value analysis.
+# Overview
 
-This Skill provides a standardized AI-assisted workflow to automate:
+Reliable molecular experiments in plants depend on accurate target gene identification and primer design.
 
-* genome-based qPCR primer design
-* primer quality evaluation
-* polyploid gene specificity assessment
-* qPCR expression analysis preparation
+However, primer design failures frequently originate from upstream problems:
 
-It is designed for research groups working with plant genome assemblies and gene families.
+- incorrect gene identifiers
+- outdated genome annotations
+- incomplete transcript models
+- duplicated genes
+- paralog interference
+- polyploid genome complexity
+
+This Skill provides a genome-guided AI-assisted workflow that prioritizes:
+
+```
+Target validation
+        ↓
+Sequence confirmation
+        ↓
+Homolog analysis
+        ↓
+Primer design
+        ↓
+Specificity validation
+        ↓
+PCR simulation
+        ↓
+Experimental report
+```
+
+The workflow is designed for plant functional genomics projects using genome assemblies, gene annotations, and molecular validation experiments.
+
 
 ---
 
 # Features
 
-## 1. Genome-aware primer design
 
-The workflow integrates:
+## 1. Genome-guided gene identity validation
 
-* genome sequence
-* GFF3 annotation
-* CDS
-* transcript sequences
+Unlike traditional primer design pipelines, this Skill does not directly convert a gene ID into primers.
 
-to design primers based on actual gene structures.
+Before primer design, the workflow verifies:
+
+- gene annotation
+- transcript structure
+- CDS completeness
+- protein characteristics
+- sequence consistency
+
+The system treats user-provided gene IDs as candidate identifiers rather than confirmed biological targets.
+
+
+Example workflow:
+
+```
+Gene ID
+
+↓
+
+Genome annotation validation
+
+↓
+
+Sequence confirmation
+
+↓
+
+Functional evidence evaluation
+
+↓
+
+Primer design
+```
+
+
+This prevents errors caused by:
+
+- incorrect gene annotation
+- misidentified family members
+- obsolete gene models
+
 
 ---
 
-## 2. qPCR-specific optimization
+# 2. Multiple primer design modes
 
-Unlike cloning PCR primers, qPCR primers prioritize:
 
-* short amplicons
-* high amplification efficiency
-* reproducibility
-* specificity
+The Skill supports different experimental purposes.
 
-Default targets:
+
+## Full-length CDS cloning
+
+For:
+
+- In-Fusion cloning
+- Gibson assembly
+- overexpression vector construction
+
+Features:
+
+- complete ORF amplification
+- start/stop codon coverage
+- cloning-compatible primer architecture
+
+
+---
+
+## Semi-quantitative RT-PCR (sqRT-PCR)
+
+For:
+
+- transcript detection
+- preliminary expression validation
+- gel-based expression comparison
+
+
+Design preference:
 
 ```
 Amplicon:
-100–150 bp preferred
 
-Maximum:
-250 bp
+200–500 bp
+
+Preferred:
+
+250–350 bp
 ```
+
 
 ---
 
-## 3. Single exon gene handling
+## qRT-PCR
 
-Many plant genes lack introns.
+For:
 
-This Skill automatically recognizes:
+- quantitative expression analysis
+- RNA-seq validation
+- relative expression studies
 
-* exon number
-* intron availability
 
-and provides experimental warnings instead of failing.
-
-Example:
+Design preference:
 
 ```
-Single exon gene detected.
-DNase I treatment is recommended before reverse transcription.
+Amplicon:
+
+80–200 bp
+
+Preferred:
+
+100–150 bp
 ```
+
 
 ---
 
-## 4. Polyploid plant support
+## Homolog-specific primer design
 
-Suitable for species including:
+For:
 
-* Medicago sativa
-* wheat
-* cotton
-* soybean
-* other polyploid crops
+- duplicated genes
+- gene families
+- polyploid genomes
 
-The workflow distinguishes:
 
-* gene-specific primers
-* homeolog-compatible primers
-* family-level primers
+The workflow evaluates whether primers can distinguish:
+
+- target gene
+- paralogs
+- homeologs
+- allelic variants
+
+
+---
+
+# 3. Gene family and polyploid genome support
+
+
+Many plant genomes contain highly similar duplicated genes.
+
+This Skill performs family-level specificity evaluation.
+
+Supported scenarios:
+
+- autotetraploid crops
+- allopolyploid crops
+- duplicated gene families
+
+
+Examples:
+
+- Medicago sativa
+- wheat
+- cotton
+- soybean
+- other polyploid plants
+
+
+The workflow evaluates:
+
+```
+Target gene
+
+├── Allelic variants
+
+├── Homeologs
+
+├── Paralogs
+
+└── Related family members
+```
+
+
+---
+
+# 4. Primer specificity validation
+
+
+Primer candidates are evaluated against:
+
+Required:
+
+```
+CDS database
+
+Transcript database
+```
+
+
+Recommended:
+
+```
+Genome sequence
+```
+
+
+The workflow classifies primers:
+
+
+## Class I
+
+Target-specific
+
+Suitable for individual gene analysis
+
+
+## Class II
+
+Potential homolog amplification
+
+Requires experimental consideration
+
+
+## Class III
+
+Non-specific
+
+Not recommended
+
+
+---
+
+# 5. Experimental objective-aware workflow
+
+
+Primer parameters are selected according to experimental purpose.
+
+The Skill does not apply qPCR rules to cloning PCR or sqRT-PCR.
+
+
+Supported objectives:
+
+- full-length cloning
+- expression detection
+- quantitative expression analysis
+- homolog discrimination
+- candidate gene validation
+
 
 ---
 
 # Recommended Workflow
 
+
 ```
-Genome data
-      |
-      ↓
-Target gene validation
-      |
-      ↓
-Gene structure analysis
-      |
-      ↓
-Primer3 candidate generation
-      |
-      ↓
+Genome resources
+
+        |
+
+        ↓
+
+Target gene identity validation
+
+        |
+
+        ↓
+
+Transcript and sequence confirmation
+
+        |
+
+        ↓
+
+Gene family / homolog analysis
+
+        |
+
+        ↓
+
+Experimental objective selection
+
+        |
+
+        ↓
+
+Primer design
+
+        |
+
+        ↓
+
 Specificity validation
-      |
-      ↓
-Primer ranking
-      |
-      ↓
+
+        |
+
+        ↓
+
+PCR simulation
+
+        |
+
+        ↓
+
 Primer report
-      |
-      ↓
-qPCR experiment
-      |
-      ↓
-Ct analysis
-      |
-      ↓
-Expression visualization
+
+        |
+
+        ↓
+
+Experimental validation
+
+        |
+
+        ↓
+
+Expression analysis
 ```
+
 
 ---
 
 # Required Input
 
+
 Users should provide:
+
 
 ```
 1. Genome FASTA
 
 2. GFF3 annotation
 
-3. CDS/transcript FASTA
+3. CDS FASTA
 
-4. Target gene list
+4. Transcript FASTA
 
-5. Optional:
-   - protein references
-   - haplotype sequences
-   - previous primers
+5. Target information:
+
+   - Gene ID
+   - Gene list
+   - Gene family name
+   - Sequence
+
+Optional:
+
+   - Protein FASTA
+   - Haplotype sequences
+   - Reference homolog sequences
+   - Previous primers
 ```
+
 
 ---
 
-# Output
+# Interactive Confirmation
+
+
+Before execution, the Agent may request:
+
+
+## Experimental purpose
+
+Examples:
+
+```
+- cloning
+- sqRT-PCR
+- qRT-PCR
+- homolog-specific detection
+```
+
+
+## Target source
+
+Examples:
+
+```
+- genome annotation
+- gene family analysis
+- transcriptome analysis
+- published gene
+```
+
+
+## Confidence of target identity
+
+Examples:
+
+```
+confirmed
+uncertain
+unknown
+```
+
+
+This prevents automated design based on incorrect assumptions.
+
+
+---
+
+# Output Files
+
 
 The Skill generates:
 
-## Primer table
+
+## Target validation
+
 
 ```
-Target_qPCR_Primers_Result.csv
+Gene_identity_validation.tsv
+
+Gene_relationship_analysis.tsv
 ```
 
-including:
 
-* primer sequences
-* Tm
-* GC content
-* amplicon size
-* specificity class
-* intron information
-* ranking score
+Including:
 
-## Report
+- annotation evidence
+- transcript selection
+- homolog information
+- confidence level
+
+
+---
+
+## Primer results
+
 
 ```
-Target_qPCR_Primers_Report.md
+Cloning_primers.tsv
+
+sqRT_PCR_primers.tsv
+
+qRT_PCR_primers.tsv
 ```
 
-including:
 
-* design strategy
-* recommended primers
-* validation summary
-* experimental notes
+Including:
+
+- primer sequence
+- Tm
+- GC content
+- product size
+- specificity evaluation
+
+
+---
+
+## Validation results
+
+
+```
+Primer_specificity.tsv
+
+PCR_simulation.tsv
+```
+
+
+Including:
+
+- off-target analysis
+- expected amplification products
+- primer reliability
+
+
+---
+
+## Final report
+
+
+```
+Primer_Design_Report.pdf
+```
+
+
+Including:
+
+- target validation
+- sequence evidence
+- primer design strategy
+- specificity assessment
+- experimental recommendations
+
 
 ---
 
 # Recommended Use Cases
 
+
 Suitable for:
 
-* gene family expression studies
-* candidate gene validation
-* RNA-seq validation
-* stress response experiments
-* developmental expression analysis
+
+## Functional genomics
+
+- candidate gene validation
+- overexpression experiments
+- gene characterization
+
+
+## Gene family studies
+
+- duplicated gene analysis
+- homolog-specific expression
+
+
+## Transcriptome studies
+
+- RNA-seq validation
+- stress response experiments
+- developmental expression analysis
+
+
+## Polyploid crop research
 
 Examples:
 
-* DELLA
-* WOX
-* TCP
-* NAM/CUC
-* MYB
-* bHLH
-* other plant gene families
+- Medicago sativa
+- wheat
+- cotton
+- soybean
+
 
 ---
 
 # Limitations
 
+
 This Skill does not:
 
-* identify new gene families
-* predict tissue expression patterns
-* replace experimental validation
 
-Primer performance should still be confirmed by:
+- replace biological interpretation
+- guarantee experimental PCR success
+- determine gene function automatically
+- replace laboratory validation
 
-* standard PCR
-* melt curve analysis
-* amplification efficiency testing
+
+Experimental confirmation is still required:
+
+
+For cloning:
+
+- colony PCR
+- Sanger sequencing
+- ORF verification
+
+
+For expression analysis:
+
+- PCR validation
+- qRT-PCR efficiency testing
+- biological replication
+
 
 ---
 
 # Version
 
-Version: 1.0
+
+Version:
+
+```
+2.0
+```
+
 
 Designed for:
 
 Plant molecular biology laboratories
 
+
 Workflow type:
 
-AI-assisted computational biology pipeline
+```
+AI-assisted genome-guided molecular biology pipeline
+```
+
+
+Core principle:
+
+```
+Validate the gene first.
+Design primers second.
+```
