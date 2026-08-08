@@ -8,7 +8,7 @@ authors:
   given-names: "Huanwei"
   orcid: "https://orcid.org/0009-0007-4062-5987"
 title: "Plant-qPCR-Agent-Skill:"
-version: 1.0.0
-doi: 10.5281/zenodo.21817269
-date-released: 2026-08-06
+version: 2.0.0
+doi: 10.5281/zenodo.21849549
+date-released: 2026-08-08
 url: "https://github.com/Li-Chia-ching/Plant-qPCR-Agent-Skill"
